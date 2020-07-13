@@ -1,0 +1,7 @@
+ShadowComm
+
+Internal/External data transfer utility, building on the tech created for ACE.
+
+Optional encryption on internal connections, enforced encryption on external connections.
+
+Support for passwords, salting, hashing, etc.
