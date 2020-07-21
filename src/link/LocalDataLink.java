@@ -60,9 +60,9 @@ public class LocalDataLink extends DataLink {
             }
             byte[] data = input.get();
             byte instructionCode = data[0];
-            int remainderSize = data.length - 1;
+            int remainderSize = data.length - InstructionDatum.HEADER_LENGTH;
             byte[] remainder = new byte[remainderSize];
-            System.arraycopy(data, 1, remainder, 0, remainderSize);
+            System.arraycopy(data, InstructionDatum.HEADER_LENGTH, remainder, 0, remainderSize);
             DATA_HANDLER.handle(instructionCode, remainder, this);
             input.set(null);
         }

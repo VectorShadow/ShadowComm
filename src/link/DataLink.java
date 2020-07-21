@@ -7,7 +7,7 @@ import link.instructions.InstructionDatum;
  * or two services connected remotely. Each link must be constructed with a data handler to provide
  * implementation, link-type(local vs. remote), or service(frontend vs. backend) specific utility.
  */
-public abstract class DataLink implements Runnable {
+public abstract class DataLink extends Thread {
 
     protected final DataHandler DATA_HANDLER;
 

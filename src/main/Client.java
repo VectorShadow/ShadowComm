@@ -20,6 +20,7 @@ public class Client {
      */
     public static RemoteDataLink connect(DataHandler dataHandler, String hostName, int portNumber) throws IOException {
         RemoteDataLink rdl = new RemoteDataLink(dataHandler, new Socket(hostName, portNumber));
+        rdl.start();
         RSA.generateSessionKeys();
         rdl.transmit(new TransmitPublicKeyInstructionDatum(RSA.getSessionPublicKey()));
         return rdl;

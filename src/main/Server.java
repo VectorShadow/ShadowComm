@@ -8,7 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class Server implements Runnable{
+public class Server extends Thread {
     private final DataHandler dataHandler;
     private final ArrayList<RemoteDataLink> openDataLinks;
     private final ServerSocket serverSocket;
@@ -27,6 +27,7 @@ public class Server implements Runnable{
                 socket = serverSocket.accept();
                 RemoteDataLink rdl = new RemoteDataLink(dataHandler, socket);
                 openDataLinks.add(rdl);
+                rdl.start();
             } catch (IOException e) {
                 LogHub.logFatalCrash("Failed to accept connection", e);
             }
