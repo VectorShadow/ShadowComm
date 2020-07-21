@@ -108,11 +108,11 @@ public class Cipher {
      * Use Radix16 form to facilitate BIG_INTEGER encryption with RSA.
      */
     private static String generateSessionKey(){
-        String sk = "";
+        StringBuilder sk = new StringBuilder();
         while (sk.length() < KEY_SIZE){
-            sk += (byte) SECURE_RANDOM.nextInt(Password.MAX_CHAR);
+            sk.append((byte)SECURE_RANDOM.nextInt(Password.MAX_CHAR));
         }
-        return convertToHexString(sk);
+        return convertToHexString(sk.toString());
     }
 
     /**
