@@ -15,12 +15,26 @@ import java.io.*;
  */
 public abstract class InstructionDatum implements Serializable {
     /**
+     * Reserved Instruction Codes.
+     */
+    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY = 0;
+    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY = 1;
+    public static final int RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION = 2;
+    /**
      * Used by DataLinks and static methods for packing and unpacking data.
      */
     public static final int HEADER_LENGTH = 4;
     private static int MASK1 = 0x00ff_0000;
     private static int MASK2 = 0x0000_ff00;
     private static int MASK3 = 0x0000_00ff;
+
+    /**
+     * Implementations must begin their own instruction codes at or above this value.
+     * @return the first integer which is not associated with a reserved instruction code.
+     */
+    public static int firstUnreservedInstructionCode() {
+        return 3; //This should always be equal to the value of the last reserved code plus one. todo - keep up to date
+    }
 
     /**
      * Convert an array of bytes representing an InstructionDatum back into that InstructionDatum.

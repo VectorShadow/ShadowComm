@@ -17,17 +17,6 @@ import java.net.Socket;
  */
 public abstract class DataHandler {
 
-    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY = 0;
-    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY = 1;
-    public static final int RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION = 2;
-
-    /**
-     * Implementations must begin their own instruction codes at or above this value.
-     * @return the first integer which is not associated with a reserved instruction code.
-     */
-    public static int firstUnreservedInstructionValue() {
-        return 3; //This should always be equal to the value of the last reserved code plus one. todo - keep up to date
-    }
     /**
      * Implementation specific handling of a lost connection on the specified socket.
      */
@@ -60,14 +49,14 @@ public abstract class DataHandler {
      * @return true if the instruction should be handled by the implementation, false if already handled internally.
      */
     private boolean test(int instructionCode, InstructionDatum instructionDatum, DataLink responseLink) {
-        if (instructionCode >= firstUnreservedInstructionValue()) return true;
+        if (instructionCode >= InstructionDatum.firstUnreservedInstructionCode()) return true;
         switch (instructionCode) {
             /*
              * Receive a public key.
              * This is a server side operation - the response is to use the public key to encrypt the
              * session key, then transmit the encrypted session key back to the client.
              */
-            case RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY:
+            case InstructionDatum.RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY:
                 BigInteger encryptedSessionKey =
                         RSA.encrypt(
                                 new BigInteger(Cipher.getSessionKey(), 16),
@@ -81,7 +70,7 @@ public abstract class DataHandler {
              * then overwrite the session secret key with it.
              * We also go ahead and establish end-to-end encryption on the dataLink on our end.
              */
-            case RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY:
+            case InstructionDatum.RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY:
                 Cipher.setSessionKey(
                         RSA.decrypt(((TransmitEncryptedSecretKeyInstructionDatum)instructionDatum).ENCRYPTED_SECRET_KEY)
                 );
@@ -94,7 +83,7 @@ public abstract class DataHandler {
              * further encrypted operations will be successful.
              * End-to-end encryption is now confirmed on both ends of the link.
              */
-            case RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION:
+            case InstructionDatum.RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION:
                 responseLink.establishEndToEndEncryption();
                 break;
             //todo - additional reserved codes, if necessary
