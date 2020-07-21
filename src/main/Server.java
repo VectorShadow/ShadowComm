@@ -1,9 +1,7 @@
 package main;
 
-import crypto.RSA;
 import link.DataHandler;
 import link.RemoteDataLink;
-import link.instructions.TransmitPublicKeyInstructionDatum;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -16,7 +14,6 @@ public class Server implements Runnable{
     private final ServerSocket serverSocket;
 
     public Server(DataHandler dataHandler, int portNumber) throws IOException {
-        RSA.generateSessionKeys();
         this.dataHandler = dataHandler;
         openDataLinks = new ArrayList<>();
         serverSocket = new ServerSocket(portNumber);
@@ -30,7 +27,6 @@ public class Server implements Runnable{
                 socket = serverSocket.accept();
                 RemoteDataLink rdl = new RemoteDataLink(dataHandler, socket);
                 openDataLinks.add(rdl);
-                rdl.transmit(new TransmitPublicKeyInstructionDatum(RSA.getSessionPublicKey()));
             } catch (IOException e) {
                 LogHub.logFatalCrash("Failed to accept connection", e);
             }

@@ -60,8 +60,8 @@ public abstract class DataHandler {
         switch (instructionCode) {
             /*
              * Receive a public key.
-             * This is a client side operation - the response is to use the public key to encrypt the
-             * session key, then transmit the encrypted session key to the server.
+             * This is a server side operation - the response is to use the public key to encrypt the
+             * session key, then transmit the encrypted session key back to the client.
              */
             case RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY:
                 BigInteger encryptedSessionKey =
@@ -73,7 +73,7 @@ public abstract class DataHandler {
                 break;
             /*
              * Receive an encrypted secret key.
-             * This is a server side operation - the response is to decrypt the transmitted key via our private ket,
+             * This is a client side operation - the response is to decrypt the transmitted key via our private key,
              * then overwrite the session secret key with it.
              * We also go ahead and establish end-to-end encryption on the dataLink on our end.
              */
@@ -81,17 +81,17 @@ public abstract class DataHandler {
                 Cipher.setSessionKey(
                         RSA.decrypt(((TransmitEncryptedSecretKeyInstructionDatum)instructionDatum).ENCRYPTED_SECRET_KEY)
                 );
-                ((RemoteDataLink)responseLink).establishEndToEndEncryption();
+                responseLink.establishEndToEndEncryption();
                 responseLink.transmit(new ConfirmEncryptionInstructionDatum());
                 break;
             /*
              * Confirm key exchange.
-             * This is a client side operation - we now know that the server is using our session secret key, so all
+             * This is a server side operation - we now know that the client is using our session secret key, so all
              * further encrypted operations will be successful.
              * End-to-end encryption is now confirmed on both ends of the link.
              */
             case RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION:
-                ((RemoteDataLink)responseLink).establishEndToEndEncryption();
+                responseLink.establishEndToEndEncryption();
                 break;
             //todo - additional reserved codes, if necessary
             default:
