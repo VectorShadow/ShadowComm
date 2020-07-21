@@ -21,9 +21,13 @@ public abstract class DataHandler {
     public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY = 1;
     public static final int RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION = 2;
 
-    //todo - keep updated as we add reserved codes.
-    // This should always be equal to the value of the last reserved code plus one.
-    protected static final int RESERVED_CODE_COUNT = 3;
+    /**
+     * Implementations must begin their own instruction codes at or above this value.
+     * @return the first integer which is not associated with a reserved instruction code.
+     */
+    public static int firstUnreservedInstructionValue() {
+        return 3; //This should always be equal to the value of the last reserved code plus one. todo - keep up to date
+    }
     /**
      * Implementation specific handling of a lost connection on the specified socket.
      */
@@ -56,7 +60,7 @@ public abstract class DataHandler {
      * @return true if the instruction should be handled by the implementation, false if already handled internally.
      */
     private boolean test(int instructionCode, InstructionDatum instructionDatum, DataLink responseLink) {
-        if (instructionCode >= RESERVED_CODE_COUNT) return true;
+        if (instructionCode >= firstUnreservedInstructionValue()) return true;
         switch (instructionCode) {
             /*
              * Receive a public key.
