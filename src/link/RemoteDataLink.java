@@ -1,7 +1,10 @@
 package link;
 
+import crypto.Cipher;
+import link.instructions.InstructionDatum;
+import link.instructions.TransmitEncryptedSecretKeyInstructionDatum;
+import link.instructions.TransmitPublicKeyInstructionDatum;
 import main.LogHub;
-import xmit.DataPacker;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -12,17 +15,39 @@ public class RemoteDataLink extends DataLink {
 
     private static final int BLOCK_SIZE = 1_024;
 
-    Socket socket;
+    private final Socket socket;
 
     public RemoteDataLink(DataHandler dataHandler, Socket socket) {
         super(dataHandler);
         this.socket = socket;
     }
 
+    public Socket getSocket() {
+        return socket;
+    }
+
+    /**
+     * Remote encryption and decryption use the session secret key provided by the Cipher class.
+     * These methods will fail if end-to-end encryption is not established first.
+     */
+    @Override
+    public String decrypt(String message) {
+        if (!encrypted)
+            throw new IllegalStateException("Called decrypt() on an unencrypted RemoteDataLink.");
+        return Cipher.decrypt(message);
+    }
+
+    @Override
+    public String encrypt(String message) {
+        if (!encrypted)
+            throw new IllegalStateException("Called encrypt() on an unencrypted RemoteDataLink.");
+        return Cipher.encrypt(message);
+    }
+
     /**
      * todo - write up of how receive works
      */
-    public void receive() {
+    protected void receive() {
         byte instruction = 0; //byte code associated with a unique instruction type
         int instructionBodySize = 0; //the number of bytes expected by the current instruction
         int bytesReadInInstruction = 0; //the number of bytes read from the stream so far for this instruction
@@ -46,13 +71,13 @@ public class RemoteDataLink extends DataLink {
                     socket.close(); //then close the socket.
                 } else if (bytesRead > 0){ //data was read from the stream this pass - we do nothing on 0
                     if (instruction == 0) { //if we have no current instruction, parse for the next one
-                        if (bytesRead < DataPacker.HEADER_LENGTH) throw new IllegalArgumentException( //we need a 4 byte header to begin
+                        if (bytesRead < InstructionDatum.HEADER_LENGTH) throw new IllegalArgumentException( //we need a 4 byte header to begin
                                 "Stream contained too few bytes to parse: " + bytesRead + " bytes were in the stream.");
                         instruction = streamBlock[0]; //set the instruction code
-                        instructionBodySize = DataPacker.readSize(streamBlock[1], streamBlock[2], streamBlock[3]); //get the size as an int
+                        instructionBodySize = InstructionDatum.readSize(streamBlock[1], streamBlock[2], streamBlock[3]); //get the size as an int
                         instructionBody = new byte[instructionBodySize]; //initialize the body block
                     } else firstBlock = false; //else ensure we no longer exclude the header until this instruction is complete
-                    for (int i = firstBlock ? DataPacker.HEADER_LENGTH : 0; i < bytesRead; ++i) { //iterate through the bytes read this pass
+                    for (int i = firstBlock ? InstructionDatum.HEADER_LENGTH : 0; i < bytesRead; ++i) { //iterate through the bytes read this pass
                         if (bytesReadInInstruction < instructionBodySize){ //bytes from the current instruction
                             instructionBody[bytesReadInInstruction++] = streamBlock[i];
                         } else { //bytes from a new instruction
@@ -60,7 +85,7 @@ public class RemoteDataLink extends DataLink {
                         }
                     }
                     if (bytesReadInInstruction >= instructionBodySize) { //if we finished an instruction, handle it
-                        DATA_HANDLER.handle(instruction, instructionBody);
+                        DATA_HANDLER.handle(instruction, instructionBody, this);
                         instruction = 0; //then reset the data members
                         instructionBodySize = 0;
                         bytesReadInInstruction = 0;
@@ -76,9 +101,27 @@ public class RemoteDataLink extends DataLink {
     }
 
     /**
+     * Unencrypted transmission on a remote data link is only permitted to establish end-to-end encryption.
+     * Once it has been established, or if the instruction datum being transmitted is part of the handshake,
+     * it proceeds as usual.
+     */
+    @Override
+    public void transmit(InstructionDatum instructionDatum) {
+        if (
+                encrypted ||
+                        instructionDatum instanceof TransmitPublicKeyInstructionDatum ||
+                        instructionDatum instanceof TransmitEncryptedSecretKeyInstructionDatum
+        )
+            transmit(instructionDatum.pack());
+        else
+            throw new IllegalStateException("Attempted to transmit remotely without establishing end-to-end encryption.");
+    }
+
+    /**
      * Transmission is accomplished remotely by writing all data to the associated socket's output stream.
      */
-    public void transmit(byte[] data){
+    @Override
+    protected void transmit(byte[] data){
         try {
             socket.getOutputStream().write(data);
         } catch (IOException ioe) {

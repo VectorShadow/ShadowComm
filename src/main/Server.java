@@ -1,22 +1,25 @@
 package main;
 
+import crypto.RSA;
+import link.DataHandler;
+import link.RemoteDataLink;
+import link.instructions.TransmitPublicKeyInstructionDatum;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
 public class Server implements Runnable{
-    private ArrayList<Socket> openSockets;
-    private ServerSocket serverSocket;
+    private final DataHandler dataHandler;
+    private final ArrayList<RemoteDataLink> openDataLinks;
+    private final ServerSocket serverSocket;
 
-    public Server(int portNumber) {
-        //todo - init crypto
-        openSockets = new ArrayList<>();
-        try {
-            serverSocket = new ServerSocket(portNumber);
-        } catch (IOException e) {
-            LogHub.logFatalCrash("Failed to initialize server socket on port " + portNumber, e);
-        }
+    public Server(DataHandler dataHandler, int portNumber) throws IOException {
+        RSA.generateSessionKeys();
+        this.dataHandler = dataHandler;
+        openDataLinks = new ArrayList<>();
+        serverSocket = new ServerSocket(portNumber);
     }
 
     @Override
@@ -25,15 +28,16 @@ public class Server implements Runnable{
         for(;;) {
             try {
                 socket = serverSocket.accept();
-                openSockets.add(socket);
-                //todo - begin key exchange
+                RemoteDataLink rdl = new RemoteDataLink(dataHandler, socket);
+                openDataLinks.add(rdl);
+                rdl.transmit(new TransmitPublicKeyInstructionDatum(RSA.getSessionPublicKey()));
             } catch (IOException e) {
                 LogHub.logFatalCrash("Failed to accept connection", e);
             }
         }
     }
 
-    public ArrayList<Socket> getOpenSockets() {
-        return openSockets;
+    public ArrayList<RemoteDataLink> getOpenDataLinks() {
+        return openDataLinks;
     }
 }

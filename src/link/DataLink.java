@@ -1,6 +1,6 @@
 package link;
 
-import java.net.Socket;
+import link.instructions.InstructionDatum;
 
 /**
  * DataLink provides two-way data transmission, either between two services connected locally,
@@ -11,8 +11,17 @@ public abstract class DataLink implements Runnable {
 
     protected final DataHandler DATA_HANDLER;
 
+    protected boolean encrypted = false;
+
     public DataLink(DataHandler dataHandler) {
         DATA_HANDLER = dataHandler;
+    }
+
+    public abstract String decrypt(String message);
+    public abstract String encrypt(String message);
+
+    void establishEndToEndEncryption() {
+        encrypted = true;
     }
 
     @Override
@@ -20,8 +29,8 @@ public abstract class DataLink implements Runnable {
         receive();
     }
 
-    abstract void receive();
+    protected abstract void receive();
 
-
-    abstract void transmit(byte[] data);
+    public abstract void transmit(InstructionDatum instructionDatum);
+    protected abstract void transmit(byte[] data);
 }

@@ -1,5 +1,6 @@
 package crypto;
 
+import java.math.BigInteger;
 import java.security.SecureRandom;
 
 /**
@@ -16,20 +17,29 @@ public class Cipher {
     private static final char LOWER_MASK = 0x0f; //mask for converting hex chars to normal chars
     private static final int BYTE_MASK = 0x0000_007f;
 
-    private static final String SESSION_KEY = generateSessionKey();
+    private static String sessionKey = generateSessionKey();
 
     /**
      * Client side - get the current session key for transmission to server.
      */
     public static String getSessionKey(){
-        return SESSION_KEY;
+        return sessionKey;
+    }
+
+    /**
+     * Server side - override the automatically generated session key with an RSA encrypted transmission from the
+     * client. Since the RSA encrypted key is a BigInteger, we transform it back into a radix16 string, which is
+     * the format the sessionKey needs to be in to function.
+     */
+    public static void setSessionKey(BigInteger transmittedSessionKey) {
+        sessionKey = transmittedSessionKey.toString(16);
     }
 
     /**
      * Encrypt a string for secure transmission.
      */
     public static String encrypt(String plainText){
-        return encrypt(plainText, SESSION_KEY);
+        return encrypt(plainText, sessionKey);
     }
 
     public static String encrypt(String plainText, String secretKey) {
@@ -40,7 +50,7 @@ public class Cipher {
      * Decrypt a cipher string.
      */
     public static String decrypt(String plainText) {
-        return decrypt(plainText, SESSION_KEY);
+        return decrypt(plainText, sessionKey);
     }
     public static String decrypt(String cipherText, String secretKey) {
         return convertFromHexString(xorApplyKey(bytewiseShiftRight(cipherText), secretKey));
@@ -190,7 +200,7 @@ public class Cipher {
      * This encrypts plain text or decrypts cipher text.
      */
     private static String xorApplyKey(String sourceText) {
-        return xorApplyKey(sourceText, SESSION_KEY);
+        return xorApplyKey(sourceText, sessionKey);
     }
     private static String xorApplyKey(String sourceText, String secretKey) {
         byte[] sourceBytes = sourceText.getBytes();

@@ -1,5 +1,7 @@
 package link;
 
+import crypto.Cipher;
+import link.instructions.InstructionDatum;
 import main.LogHub;
 
 /**
@@ -28,12 +30,26 @@ public class LocalDataLink extends DataLink {
     }
 
     /**
+     * Local data links function on the same machine, so encryption is not required.
+     * If it has been enabled during pairing, we use the session secret key.
+     */
+    @Override
+    public String decrypt(String message) {
+        return encrypted ? Cipher.decrypt(message) : message;
+    }
+
+    @Override
+    public String encrypt(String message) {
+        return encrypted ? Cipher.encrypt(message) : message;
+    }
+
+    /**
      * Reception is accomplished by looping infinitely, checking with a delay for any changes to the input array.
      * When the input array has data, it's immediately passed on to the associated DataHandler, then cleared from the
      * input array.
      */
     @Override
-    public void receive() {
+    protected void receive() {
         for (;;) {
             while (input.get() == null) { //wait until we have something to do
                 try {
@@ -47,11 +63,18 @@ public class LocalDataLink extends DataLink {
             int remainderSize = data.length - 1;
             byte[] remainder = new byte[remainderSize];
             System.arraycopy(data, 1, remainder, 0, remainderSize);
-            DATA_HANDLER.handle(instructionCode, remainder);
+            DATA_HANDLER.handle(instructionCode, remainder, this);
             input.set(null);
         }
     }
 
+    /**
+     * Since a local data link need not worry about encryption, simply send the transmission for the datum.
+     */
+    @Override
+    public void transmit(InstructionDatum id) {
+        transmit(id.pack());
+    }
     /**
      * Transmission is accomplished locally by storing the data to be transmitted in the output array, which becomes
      * the input array for the paired Link.
@@ -59,7 +82,7 @@ public class LocalDataLink extends DataLink {
      * paired Link's receive() method.
      */
     @Override
-    public void transmit(byte[] data) {
+    protected void transmit(byte[] data) {
         while(output.get() != null) { //don't overwrite the current output until it's been handled
             try {
                 Thread.sleep(5);
@@ -70,12 +93,20 @@ public class LocalDataLink extends DataLink {
         output.set(data);
     }
 
+    public static void pair(LocalDataLink link1, LocalDataLink link2) {
+        pair(link1, link2, false);
+    }
     /**
      * Pair two LocalDataLinks so that their input and output pointers match each other's output and input arrays.
+     * If local encryption is desired, it should be specified as part of this call.
      */
-    public static void pair(LocalDataLink link1, LocalDataLink link2) {
+    public static void pair(LocalDataLink link1, LocalDataLink link2, boolean forceEncryption) {
         link1.input = link2.output;
         link1.output = link2.input;
+        if (forceEncryption) {
+            link1.establishEndToEndEncryption();
+            link2.establishEndToEndEncryption();
+        }
         new Thread(link1).start();
         new Thread(link2).start();
     }
