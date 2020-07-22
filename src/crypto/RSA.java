@@ -62,7 +62,9 @@ public class RSA {
      * todo - build support for multi-step encryption of larger inputs.
      */
     private static void checkSize(BigInteger inputData, BigInteger publicKey) {
-        if (inputData.bitLength() > publicKey.bitLength())
+        if (inputData.compareTo(BigInteger.ZERO) < 0)
+            LogHub.logFatalCrash("Size of inputData must be > 0", new IllegalArgumentException());
+        if (inputData.compareTo(publicKey) > 0)
             LogHub.logFatalCrash(
                     "Encryption of very large values not supported (input size " +
                             inputData.bitLength() + " > maximum allowed size " + publicKey.bitLength() + ")",
