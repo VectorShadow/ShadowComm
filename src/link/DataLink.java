@@ -17,9 +17,6 @@ public abstract class DataLink extends Thread {
         DATA_HANDLER = dataHandler;
     }
 
-    public abstract String decrypt(String message);
-    public abstract String encrypt(String message);
-
     void establishEndToEndEncryption() {
         encrypted = true;
     }

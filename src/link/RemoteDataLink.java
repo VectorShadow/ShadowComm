@@ -1,9 +1,7 @@
 package link;
 
-import crypto.Cipher;
+import crypto.ByteCipher;
 import link.instructions.InstructionDatum;
-import link.instructions.TransmitEncryptedSecretKeyInstructionDatum;
-import link.instructions.TransmitPublicKeyInstructionDatum;
 import main.LogHub;
 
 import java.io.IOException;
@@ -24,24 +22,6 @@ public class RemoteDataLink extends DataLink {
 
     public Socket getSocket() {
         return socket;
-    }
-
-    /**
-     * Remote encryption and decryption use the session secret key provided by the Cipher class.
-     * These methods will fail if end-to-end encryption is not established first.
-     */
-    @Override
-    public String decrypt(String message) {
-        if (!encrypted)
-            throw new IllegalStateException("Called decrypt() on an unencrypted RemoteDataLink.");
-        return Cipher.decrypt(message);
-    }
-
-    @Override
-    public String encrypt(String message) {
-        if (!encrypted)
-            throw new IllegalStateException("Called encrypt() on an unencrypted RemoteDataLink.");
-        return Cipher.encrypt(message);
     }
 
     /**
@@ -85,6 +65,8 @@ public class RemoteDataLink extends DataLink {
                         }
                     }
                     if (bytesReadInInstruction >= instructionBodySize) { //if we finished an instruction, handle it
+                        if (encrypted) //post handshake transmissions are encrypted
+                            instructionBody = ByteCipher.decrypt(instructionBody);
                         DATA_HANDLER.handle(instruction, instructionBody, this);
                         instruction = 0; //then reset the data members
                         instructionBodySize = 0;
@@ -107,12 +89,9 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
-        if (
-                encrypted ||
-                        instructionDatum instanceof TransmitPublicKeyInstructionDatum ||
-                        instructionDatum instanceof TransmitEncryptedSecretKeyInstructionDatum
-        )
-            transmit(instructionDatum.pack());
+        if (instructionDatum.isReservedForHandshake())
+            transmit(instructionDatum.pack(false));
+        else if (encrypted) transmit(instructionDatum.pack(true));
         else
             throw new IllegalStateException("Attempted to transmit remotely without establishing end-to-end encryption.");
     }

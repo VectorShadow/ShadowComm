@@ -4,6 +4,7 @@ import main.LogHub;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 
 
 /**
@@ -24,8 +25,9 @@ public class Password {
         char nextCandidateChar;
         String randomSalt = "";
         char nextAlphaSeed = 1;
+        final SecureRandom SECURE_RANDOM = new SecureRandom();
         for (int i = 0; i < SALT_LENGTH; ++i){
-            nextCandidateChar = (char)Cipher.SECURE_RANDOM.nextInt(MAX_CHAR);
+            nextCandidateChar = (char)SECURE_RANDOM.nextInt(MAX_CHAR);
             randomSalt += forceAlphaNumericalSymbolic(nextCandidateChar, nextAlphaSeed);
             nextAlphaSeed = nextCandidateChar;
         }
@@ -39,7 +41,7 @@ public class Password {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             String sha256 = new String(md.digest(saltedPassword.getBytes()));
-            return Cipher.convertToHexString(sha256);
+            return HexCipher.convertToHexString(sha256.getBytes());
         } catch (NoSuchAlgorithmException e) {
             LogHub.logFatalCrash("Unexpected exception in Password.hash().", e);
             return null;

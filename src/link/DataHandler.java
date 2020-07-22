@@ -1,6 +1,7 @@
 package link;
 
-import crypto.Cipher;
+import crypto.ByteCipher;
+import crypto.HexCipher;
 import crypto.RSA;
 import link.instructions.ConfirmEncryptionInstructionDatum;
 import link.instructions.InstructionDatum;
@@ -49,17 +50,22 @@ public abstract class DataHandler {
      * @return true if the instruction should be handled by the implementation, false if already handled internally.
      */
     private boolean test(int instructionCode, InstructionDatum instructionDatum, DataLink responseLink) {
-        if (instructionCode >= InstructionDatum.firstUnreservedInstructionCode()) return true;
+        if (instructionCode >= InstructionDatum.FIRST_ENCRYPTABLE_INSTRUCTION_CODE) return true;
         switch (instructionCode) {
             /*
              * Receive a public key.
              * This is a server side operation - the response is to use the public key to encrypt the
              * session key, then transmit the encrypted session key back to the client.
              */
-            case InstructionDatum.RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY:
+            case InstructionDatum.HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY:
                 BigInteger encryptedSessionKey =
                         RSA.encrypt(
-                                new BigInteger(Cipher.getSessionKey(), 16),
+                                new BigInteger(
+                                        HexCipher.convertToHexString(
+                                                ByteCipher.getSessionKey()
+                                        ),
+                                        16
+                                ),
                                 ((TransmitPublicKeyInstructionDatum)instructionDatum).PUBLIC_KEY
                         );
                 responseLink.transmit(new TransmitEncryptedSecretKeyInstructionDatum(encryptedSessionKey));
@@ -70,20 +76,24 @@ public abstract class DataHandler {
              * then overwrite the session secret key with it.
              * We also go ahead and establish end-to-end encryption on the dataLink on our end.
              */
-            case InstructionDatum.RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY:
-                Cipher.setSessionKey(
-                        RSA.decrypt(((TransmitEncryptedSecretKeyInstructionDatum)instructionDatum).ENCRYPTED_SECRET_KEY)
+            case InstructionDatum.HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY:
+                ByteCipher.setSessionKey(
+                        HexCipher.convertFromHexString(
+                                RSA.decrypt(
+                                        ((TransmitEncryptedSecretKeyInstructionDatum)instructionDatum)
+                                                .ENCRYPTED_SECRET_KEY
+                                ).toString(16)
+                        )
                 );
                 responseLink.establishEndToEndEncryption();
                 responseLink.transmit(new ConfirmEncryptionInstructionDatum());
-                break;
             /*
              * Confirm key exchange.
              * This is a server side operation - we now know that the client is using our session secret key, so all
              * further encrypted operations will be successful.
              * End-to-end encryption is now confirmed on both ends of the link.
              */
-            case InstructionDatum.RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION:
+            case InstructionDatum.HANDSHAKE_INSTRUCTION_CODE_CONFIRM_ENCRYPTION:
                 responseLink.establishEndToEndEncryption();
                 break;
             //todo - additional reserved codes, if necessary

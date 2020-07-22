@@ -1,5 +1,6 @@
 package link.instructions;
 
+import crypto.ByteCipher;
 import main.LogHub;
 
 import java.io.*;
@@ -15,11 +16,14 @@ import java.io.*;
  */
 public abstract class InstructionDatum implements Serializable {
     /**
-     * Reserved Instruction Codes.
+     * Instruction Codes reserved for RSA key exchange handshake.
      */
-    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY = 0;
-    public static final int RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY = 1;
-    public static final int RESERVED_INSTRUCTION_CODE_CONFIRM_ENCRYPTION = 2;
+    public static final int HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY = 0;
+    public static final int HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY = 1;
+    public static final int HANDSHAKE_INSTRUCTION_CODE_CONFIRM_ENCRYPTION = 2;
+
+    //This should always be equal to the value of the last reserved code plus one. todo - keep up to date
+    public static final int FIRST_ENCRYPTABLE_INSTRUCTION_CODE = 3;
     /**
      * Used by DataLinks and static methods for packing and unpacking data.
      */
@@ -27,14 +31,6 @@ public abstract class InstructionDatum implements Serializable {
     private static int MASK1 = 0x00ff_0000;
     private static int MASK2 = 0x0000_ff00;
     private static int MASK3 = 0x0000_00ff;
-
-    /**
-     * Implementations must begin their own instruction codes at or above this value.
-     * @return the first integer which is not associated with a reserved instruction code.
-     */
-    public static int firstUnreservedInstructionCode() {
-        return 3; //This should always be equal to the value of the last reserved code plus one. todo - keep up to date
-    }
 
     /**
      * Convert an array of bytes representing an InstructionDatum back into that InstructionDatum.
@@ -71,7 +67,7 @@ public abstract class InstructionDatum implements Serializable {
      * Pack an InstructionDatum into a byte array carrying the instruction code corresponding to the InstructionDatum,
      * followed by the size of the byte array representation of the InstructionDatum, followed by that array.
      */
-    public byte[] pack() {
+    public byte[] pack(boolean encrypt) {
         byte[] rawData = toByteArray();
         int size = rawData.length;
         byte[] packedData = new byte[size + HEADER_LENGTH];
@@ -79,7 +75,7 @@ public abstract class InstructionDatum implements Serializable {
         packedData[1] = (byte)((size & MASK1) >> 16);
         packedData[2] = (byte)((size & MASK2) >> 8);
         packedData[3] = (byte)(size & MASK3);
-        System.arraycopy(rawData, 0, packedData, HEADER_LENGTH, size);
+        System.arraycopy(encrypt ? ByteCipher.encrypt(rawData) : rawData, 0, packedData, HEADER_LENGTH, size);
         return packedData;
     }
 
@@ -88,6 +84,15 @@ public abstract class InstructionDatum implements Serializable {
      */
     public static int readSize(byte s1, byte s2, byte s3) {
         return ((s1 << 16) & MASK1) | ((s2 << 8) & MASK2) | (s3 & MASK3);
+    }
+
+    /**
+     * @return whether this Datum corresponds to a reserved instruction code.
+     * Unreserved instructions need not be encrypted, since they are reserved for key exchange, which necessarily takes
+     * place prior to establishment of an encrypted connection.
+     */
+    public boolean isReservedForHandshake() {
+        return getInstructionCode() < FIRST_ENCRYPTABLE_INSTRUCTION_CODE;
     }
 
     /**

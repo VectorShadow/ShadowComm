@@ -10,6 +10,6 @@ public class TransmitEncryptedSecretKeyInstructionDatum extends InstructionDatum
     }
     @Override
     protected int getInstructionCode() {
-        return RESERVED_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY;
+        return HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_ENCRYPTED_SECRET_KEY;
     }
 }

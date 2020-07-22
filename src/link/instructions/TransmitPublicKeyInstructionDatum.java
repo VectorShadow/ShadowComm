@@ -12,6 +12,6 @@ public class TransmitPublicKeyInstructionDatum extends InstructionDatum {
 
     @Override
     protected int getInstructionCode() {
-        return RESERVED_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY;
+        return HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY;
     }
 }

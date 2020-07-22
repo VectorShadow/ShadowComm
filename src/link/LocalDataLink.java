@@ -1,6 +1,6 @@
 package link;
 
-import crypto.Cipher;
+import crypto.ByteCipher;
 import link.instructions.InstructionDatum;
 import main.LogHub;
 
@@ -30,20 +30,6 @@ public class LocalDataLink extends DataLink {
     }
 
     /**
-     * Local data links function on the same machine, so encryption is not required.
-     * If it has been enabled during pairing, we use the session secret key.
-     */
-    @Override
-    public String decrypt(String message) {
-        return encrypted ? Cipher.decrypt(message) : message;
-    }
-
-    @Override
-    public String encrypt(String message) {
-        return encrypted ? Cipher.encrypt(message) : message;
-    }
-
-    /**
      * Reception is accomplished by looping infinitely, checking with a delay for any changes to the input array.
      * When the input array has data, it's immediately passed on to the associated DataHandler, then cleared from the
      * input array.
@@ -63,6 +49,7 @@ public class LocalDataLink extends DataLink {
             int remainderSize = data.length - InstructionDatum.HEADER_LENGTH;
             byte[] remainder = new byte[remainderSize];
             System.arraycopy(data, InstructionDatum.HEADER_LENGTH, remainder, 0, remainderSize);
+            if (encrypted) remainder = ByteCipher.decrypt(remainder); //decrypt if necessary
             DATA_HANDLER.handle(instructionCode, remainder, this);
             input.set(null);
         }
@@ -73,7 +60,7 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum id) {
-        transmit(id.pack());
+        transmit(id.pack(encrypted));
     }
     /**
      * Transmission is accomplished locally by storing the data to be transmitted in the output array, which becomes

@@ -2,6 +2,7 @@ package link;
 
 import link.instructions.InstructionCodes;
 import link.instructions.InstructionDatum;
+import link.instructions.MessageInstructionDatum;
 import link.instructions.TestResponseInstructionDatum;
 
 import java.net.Socket;
@@ -18,6 +19,9 @@ public class ServerTestDataHandler extends DataHandler {
             case InstructionCodes.INSTRUCTION_CODE_QUERY:
                 System.out.println("Received client query... responding.");
                 responseLink.transmit(new TestResponseInstructionDatum());
+                break;
+            case InstructionCodes.INSTRUCTION_CODE_MESSAGE:
+                System.out.println("Received message: " + ((MessageInstructionDatum)instructionDatum).getMessage());
                 break;
                 default:
                     System.out.println("Unexpected code: " + instructionCode);
