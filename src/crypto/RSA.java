@@ -30,7 +30,7 @@ public class RSA {
      * @param plainText - the BigInteger representation of the message to encrypt
      * @param publicKey - the public key received from the server(same as sessionPublicKey in server's RSA)
      * @return the RSA-encrypted cipherText corresponding to plainText
-     * @throws IllegalArgumentException if plainText bitLength exceeds publicKey bitLength
+     * @throws IllegalArgumentException if the plaintext is larger than the key, or less than zero
      */
     public static BigInteger encrypt(BigInteger plainText, BigInteger publicKey){
         checkSize(plainText, publicKey);
