@@ -7,8 +7,6 @@ public class ByteCipher {
     private static final int SHIFT = 8;
     private static final int KEY_SIZE = 256;
 
-    private static final char UPPER_MASK = 0xf0; //mask for converting hex chars to normal chars
-    private static final char LOWER_MASK = 0x0f; //mask for converting hex chars to normal chars
     private static final int BYTE_MASK = 0x0000_00ff;
 
     private static byte[] sessionKey = null;
