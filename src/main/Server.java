@@ -18,7 +18,6 @@ public class Server extends Thread {
         this.dataHandler = dataHandler;
         openDataLinks = new ArrayList<>();
         serverSocket = new ServerSocket(portNumber);
-        LiveLog.start();
     }
 
     @Override
@@ -27,7 +26,10 @@ public class Server extends Thread {
         for(;;) {
             try {
                 socket = serverSocket.accept();
-                LiveLog.log("Accepted new connection on " + socket.getLocalPort());
+                LiveLog.log(
+                        "Accepted new connection on " + socket.getLocalPort(),
+                        LiveLog.LogEntryPriority.ALERT
+                );
                 RemoteDataLink rdl = new RemoteDataLink(dataHandler, socket);
                 openDataLinks.add(rdl);
                 rdl.start();
