@@ -21,6 +21,10 @@ public abstract class DataLink extends Thread {
         encrypted = true;
     }
 
+    public boolean isEncrypted() {
+        return encrypted;
+    }
+
     @Override
     public void run() {
         receive();
