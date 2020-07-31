@@ -1,6 +1,7 @@
 package link;
 
 import crypto.ByteCipher;
+import link.instructions.HandshakeInstructionDatum;
 import link.instructions.InstructionDatum;
 import main.LogHub;
 
@@ -28,7 +29,7 @@ public class RemoteDataLink extends DataLink {
      * todo - write up of how receive works
      */
     protected void receive() {
-        byte instruction = 0; //byte code associated with a unique instruction type
+        boolean activeInstruction = false;
         int instructionBodySize = 0; //the number of bytes expected by the current instruction
         int bytesReadInInstruction = 0; //the number of bytes read from the stream so far for this instruction
         byte[] instructionBody = new byte[0]; //an array which accumulates the data for this instruction
@@ -50,11 +51,11 @@ public class RemoteDataLink extends DataLink {
                     DATA_HANDLER.connectionLost(socket); //report the connection lost to the data handler
                     socket.close(); //then close the socket.
                 } else if (bytesRead > 0){ //data was read from the stream this pass - we do nothing on 0
-                    if (instruction == 0) { //if we have no current instruction, parse for the next one
+                    if (!activeInstruction) { //if we have no current instruction, parse for the next one
                         if (bytesRead < InstructionDatum.HEADER_LENGTH) throw new IllegalArgumentException( //we need a 4 byte header to begin
                                 "Stream contained too few bytes to parse: " + bytesRead + " bytes were in the stream.");
-                        instruction = streamBlock[0]; //set the instruction code
-                        instructionBodySize = InstructionDatum.readSize(streamBlock[1], streamBlock[2], streamBlock[3]); //get the size as an int
+                        activeInstruction = true;
+                        instructionBodySize = InstructionDatum.readSize(streamBlock[0], streamBlock[1]); //get the size as an int
                         instructionBody = new byte[instructionBodySize]; //initialize the body block
                     } else firstBlock = false; //else ensure we no longer exclude the header until this instruction is complete
                     for (int i = firstBlock ? InstructionDatum.HEADER_LENGTH : 0; i < bytesRead; ++i) { //iterate through the bytes read this pass
@@ -67,8 +68,8 @@ public class RemoteDataLink extends DataLink {
                     if (bytesReadInInstruction >= instructionBodySize) { //if we finished an instruction, handle it
                         if (encrypted) //post handshake transmissions are encrypted
                             instructionBody = ByteCipher.decrypt(instructionBody);
-                        DATA_HANDLER.handle(instruction, instructionBody, this);
-                        instruction = 0; //then reset the data members
+                        DATA_HANDLER.handle(instructionBody, this);
+                        activeInstruction = false; //then reset the data members
                         instructionBodySize = 0;
                         bytesReadInInstruction = 0;
                         firstBlock = true;
@@ -89,7 +90,7 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
-        if (instructionDatum.isReservedForHandshake())
+        if (instructionDatum instanceof HandshakeInstructionDatum)
             transmit(instructionDatum.pack(false));
         else if (encrypted) transmit(instructionDatum.pack(true));
         else

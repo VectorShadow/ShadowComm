@@ -45,12 +45,11 @@ public class LocalDataLink extends DataLink {
                 }
             }
             byte[] data = input.get();
-            byte instructionCode = data[0];
             int remainderSize = data.length - InstructionDatum.HEADER_LENGTH;
             byte[] remainder = new byte[remainderSize];
             System.arraycopy(data, InstructionDatum.HEADER_LENGTH, remainder, 0, remainderSize);
             if (encrypted) remainder = ByteCipher.decrypt(remainder); //decrypt if necessary
-            DATA_HANDLER.handle(instructionCode, remainder, this);
+            DATA_HANDLER.handle(remainder, this);
             input.set(null);
         }
     }

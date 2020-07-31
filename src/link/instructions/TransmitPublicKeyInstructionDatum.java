@@ -2,7 +2,7 @@ package link.instructions;
 
 import java.math.BigInteger;
 
-public class TransmitPublicKeyInstructionDatum extends InstructionDatum {
+public class TransmitPublicKeyInstructionDatum extends HandshakeInstructionDatum {
 
     public final BigInteger PUBLIC_KEY;
 
@@ -10,8 +10,4 @@ public class TransmitPublicKeyInstructionDatum extends InstructionDatum {
         PUBLIC_KEY = publicKey;
     }
 
-    @Override
-    protected int getInstructionCode() {
-        return HANDSHAKE_INSTRUCTION_CODE_TRANSMIT_PUBLIC_KEY;
-    }
 }

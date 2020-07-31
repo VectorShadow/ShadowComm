@@ -1,8 +1,8 @@
 package link;
 
-import link.instructions.InstructionCodes;
 import link.instructions.InstructionDatum;
 import link.instructions.MessageInstructionDatum;
+import link.instructions.TestQueryInstructionDatum;
 import link.instructions.TestResponseInstructionDatum;
 
 import java.net.Socket;
@@ -14,17 +14,14 @@ public class ServerTestDataHandler extends DataHandler {
     }
 
     @Override
-    protected void handle(int instructionCode, InstructionDatum instructionDatum, DataLink responseLink) {
-        switch (instructionCode) {
-            case InstructionCodes.INSTRUCTION_CODE_QUERY:
-                System.out.println("Received client query... responding.");
-                responseLink.transmit(new TestResponseInstructionDatum());
-                break;
-            case InstructionCodes.INSTRUCTION_CODE_MESSAGE:
-                System.out.println("Received message: " + ((MessageInstructionDatum)instructionDatum).getMessage());
-                break;
-                default:
-                    System.out.println("Unexpected code: " + instructionCode);
+    protected void handle(InstructionDatum instructionDatum, DataLink responseLink) {
+        if (instructionDatum instanceof TestQueryInstructionDatum) {
+            System.out.println("Received client query... responding.");
+            responseLink.transmit(new TestResponseInstructionDatum());
+        } else if (instructionDatum instanceof MessageInstructionDatum) {
+            System.out.println("Received message: " + ((MessageInstructionDatum)instructionDatum).getMessage());
+        } else {
+            System.out.println("Unexpected InstructionDatum class: " + instructionDatum.getClass());
         }
     }
 }
