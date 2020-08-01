@@ -31,8 +31,8 @@ public class Server extends Thread {
                 RemoteDataLink rdl = new RemoteDataLink(dataHandler, socket);
                 openDataLinks.addDataLink(rdl);
                 rdl.start();
-            } catch (IOException e) {
-                LogHub.logFatalCrash("Failed to accept connection", e);
+            } catch (IOException e) { //no need to kill the server here, log the error and continue
+                LogHub.logNonFatalError("Failed to accept connection", e);
             }
         }
     }
