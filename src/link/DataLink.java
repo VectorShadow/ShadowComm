@@ -29,6 +29,10 @@ public abstract class DataLink extends Thread {
 
     public boolean isExpired() { return expired; }
 
+    public void forceExpiration() {
+        expired = true;
+    }
+
     @Override
     public void run() {
         receive();
