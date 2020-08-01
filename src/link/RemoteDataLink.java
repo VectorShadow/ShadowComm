@@ -3,6 +3,7 @@ package link;
 import crypto.ByteCipher;
 import link.instructions.HandshakeInstructionDatum;
 import link.instructions.InstructionDatum;
+import main.LiveLog;
 import main.LogHub;
 
 import java.io.IOException;
@@ -90,6 +91,7 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
+        if (expired) return;
         if (instructionDatum instanceof HandshakeInstructionDatum)
             transmit(instructionDatum.pack(false));
         else if (encrypted) transmit(instructionDatum.pack(true));
@@ -104,8 +106,14 @@ public class RemoteDataLink extends DataLink {
     protected void transmit(byte[] data){
         try {
             socket.getOutputStream().write(data);
+        } catch (SocketException se) {
+            expired = true;
+            LiveLog.log(
+                    "Socket on port " + socket.getLocalPort() + " expired: " + se.getMessage(),
+                    LiveLog.LogEntryPriority.WARNING
+            );
         } catch (IOException ioe) {
-            LogHub.logFatalCrash("Failed to transmit data on socket.", ioe);
+            LogHub.logFatalCrash("Unexpected IOException on data transmission.", ioe);
         }
     }
 
