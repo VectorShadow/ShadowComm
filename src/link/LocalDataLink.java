@@ -59,6 +59,8 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum id) {
+        if (expired)
+            throw new IllegalStateException("DataLink is expired.");
         transmit(id.pack(encrypted));
     }
     /**

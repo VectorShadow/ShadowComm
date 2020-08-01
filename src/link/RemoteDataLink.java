@@ -76,10 +76,15 @@ public class RemoteDataLink extends DataLink {
                         firstBlock = true;
                     }
                 }
-            } catch (SocketException se){
+            } catch (SocketException se) {
+                expired = true;
+                LiveLog.log(
+                        "Socket on port " + socket.getLocalPort() + " expired: " + se.getMessage(),
+                        LiveLog.LogEntryPriority.ALERT
+                );
                 break;
-            } catch (IOException ioe) {
-                LogHub.logFatalCrash("Non-socket IOException while receiving on Remote Data Link.", ioe);
+            } catch (Exception e) {
+                LogHub.logFatalCrash("Exception in RemoteDataLink thread.", e);
             }
         }
     }
@@ -110,7 +115,7 @@ public class RemoteDataLink extends DataLink {
             expired = true;
             LiveLog.log(
                     "Socket on port " + socket.getLocalPort() + " expired: " + se.getMessage(),
-                    LiveLog.LogEntryPriority.WARNING
+                    LiveLog.LogEntryPriority.ALERT
             );
         } catch (IOException ioe) {
             LogHub.logFatalCrash("Unexpected IOException on data transmission.", ioe);
