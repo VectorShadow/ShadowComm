@@ -36,7 +36,7 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     protected void receive() {
-        for (;;) {
+        do {
             while (input.get() == null) { //wait until we have something to do
                 try {
                     Thread.sleep(10);
@@ -51,7 +51,7 @@ public class LocalDataLink extends DataLink {
             if (encrypted) remainder = ByteCipher.decrypt(remainder); //decrypt if necessary
             DATA_HANDLER.handle(remainder, this);
             input.set(null);
-        }
+        } while (!terminated);
     }
 
     /**
@@ -59,8 +59,6 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum id) {
-        if (expired)
-            throw new IllegalStateException("DataLink is expired.");
         transmit(id.pack(encrypted));
     }
     /**

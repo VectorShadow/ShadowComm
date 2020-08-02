@@ -38,7 +38,7 @@ public class RemoteDataLink extends DataLink {
         ArrayList<Byte> excess = new ArrayList<>(); //leftover data in the stream after completing the last instruction
         int bytesRead = 0; //the number of bytes read from the stream this iteration
         boolean firstBlock = true; //only the first block of a transmission should exclude the header segment
-        for (;;) {
+        do {
             try {
                 if (excess.size() > 0) {
                     streamBlock = listToArray(excess);
@@ -49,8 +49,7 @@ public class RemoteDataLink extends DataLink {
                     bytesRead = socket.getInputStream().read(streamBlock,0, BLOCK_SIZE);
                 }
                 if (bytesRead < 0) { //error reading on socket - connection lost
-                    DATA_HANDLER.connectionLost(socket); //report the connection lost to the data handler
-                    socket.close(); //then close the socket.
+                    DATA_HANDLER.connectionLost(this); //report the connection lost to the data handler
                 } else if (bytesRead > 0){ //data was read from the stream this pass - we do nothing on 0
                     if (!activeInstruction) { //if we have no current instruction, parse for the next one
                         if (bytesRead < InstructionDatum.HEADER_LENGTH) throw new IllegalArgumentException( //we need a 4 byte header to begin
@@ -77,16 +76,11 @@ public class RemoteDataLink extends DataLink {
                     }
                 }
             } catch (SocketException se) {
-                expired = true;
-                LiveLog.log(
-                        "Socket on port " + socket.getLocalPort() + " expired: " + se.getMessage(),
-                        LiveLog.LogEntryPriority.ALERT
-                );
-                break;
+                DATA_HANDLER.connectionLost(this);
             } catch (Exception e) {
                 LogHub.logFatalCrash("Exception in RemoteDataLink thread.", e);
             }
-        }
+        } while (!terminated);
     }
 
     /**
@@ -96,7 +90,6 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
-        if (expired) return;
         if (instructionDatum instanceof HandshakeInstructionDatum)
             transmit(instructionDatum.pack(false));
         else if (encrypted) transmit(instructionDatum.pack(true));
@@ -112,11 +105,7 @@ public class RemoteDataLink extends DataLink {
         try {
             socket.getOutputStream().write(data);
         } catch (SocketException se) {
-            expired = true;
-            LiveLog.log(
-                    "Socket on port " + socket.getLocalPort() + " expired: " + se.getMessage(),
-                    LiveLog.LogEntryPriority.ALERT
-            );
+            DATA_HANDLER.connectionLost(this);
         } catch (IOException ioe) {
             LogHub.logFatalCrash("Unexpected IOException on data transmission.", ioe);
         }

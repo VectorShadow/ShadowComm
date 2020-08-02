@@ -18,7 +18,7 @@ public abstract class DataHandler {
     /**
      * Implementation specific handling of a lost connection on the specified socket.
      */
-    protected abstract void connectionLost(Socket socket);
+    protected abstract void connectionLost(DataLink dataLink);
 
     /**
      * Implementation specific handling instructions for implementation specific codes.

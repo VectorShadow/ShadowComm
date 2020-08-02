@@ -13,7 +13,7 @@ public abstract class DataLink extends Thread {
 
     protected boolean encrypted = false;
 
-    protected boolean expired = false;
+    protected boolean terminated = false;
 
     public DataLink(DataHandler dataHandler) {
         DATA_HANDLER = dataHandler;
@@ -27,10 +27,8 @@ public abstract class DataLink extends Thread {
         return encrypted;
     }
 
-    public boolean isExpired() { return expired; }
-
-    public void forceExpiration() {
-        expired = true;
+    public void terminate() {
+        terminated = true;
     }
 
     @Override
