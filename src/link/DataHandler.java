@@ -6,7 +6,6 @@ import crypto.RSA;
 import link.instructions.*;
 
 import java.math.BigInteger;
-import java.net.Socket;
 
 /**
  * DataHandler is designed to unpack and handle transmitted data in an implementation specific fashion.
