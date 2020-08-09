@@ -5,6 +5,7 @@ import crypto.HexCipher;
 import crypto.RSA;
 import link.instructions.*;
 
+import java.io.StreamCorruptedException;
 import java.math.BigInteger;
 
 /**
@@ -32,9 +33,14 @@ public abstract class DataHandler {
      * @param responseLink the DataLink on which to transmit any required response
      */
     void handle(byte[] data, DataLink responseLink) {
-        InstructionDatum instructionDatum = InstructionDatum.fromByteArray(data);
-        if (test(instructionDatum, responseLink))
-            handle(instructionDatum, responseLink);
+        try {
+            InstructionDatum instructionDatum = InstructionDatum.fromByteArray(data);
+            if (test(instructionDatum, responseLink))
+                handle(instructionDatum, responseLink);
+        } catch (ClassCastException | StreamCorruptedException e) {
+            //todo - maybe something here? definitely don't try and implementatin handle this instruction.
+            // We should probably see if we can find out *why* this is happening.
+        }
     }
     /**
      * Test an instruction code to see if it belongs to the set of instruction codes reserved for internal use.

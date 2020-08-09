@@ -37,15 +37,15 @@ public class Password {
     /**
      * Hash a salted password with SHA-256.
      */
-    public static String hash(String saltedPassword){
+    public static byte[] hash(String saltedPassword){
+        String sha256 = "";
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            String sha256 = new String(md.digest(saltedPassword.getBytes()));
-            return HexCipher.convertToHexString(sha256.getBytes());
+            sha256 = new String(md.digest(saltedPassword.getBytes()));
         } catch (NoSuchAlgorithmException e) {
             LogHub.logFatalCrash("Unexpected exception in Password.hash().", e);
-            return null;
         }
+        return sha256.getBytes();
     }
 
     /**

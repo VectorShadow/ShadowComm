@@ -26,13 +26,15 @@ public abstract class InstructionDatum implements Serializable {
     /**
      * Convert an array of bytes representing an InstructionDatum back into that InstructionDatum.
      */
-    public static InstructionDatum fromByteArray(byte[] b) {
+    public static InstructionDatum fromByteArray(byte[] b) throws ClassCastException, StreamCorruptedException {
         ByteArrayInputStream bis = new ByteArrayInputStream(b);
         ObjectInput objectInput = null;
         InstructionDatum instructionDatum = null;
         try {
             objectInput = new ObjectInputStream(bis);
-            instructionDatum = (InstructionDatum)objectInput.readObject();
+            instructionDatum = (InstructionDatum) objectInput.readObject();
+        } catch (ClassCastException | StreamCorruptedException e) {
+            throw e;
         } catch (Exception e) {
             LogHub.logFatalCrash("Data recovery failure", e);
         } finally {

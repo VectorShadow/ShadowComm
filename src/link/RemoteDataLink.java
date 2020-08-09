@@ -95,6 +95,7 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
+        LiveLog.log("transmitting instruction datum of class " + instructionDatum.getClass(), LiveLog.LogEntryPriority.DEBUG);
         if (instructionDatum instanceof HandshakeInstructionDatum)
             transmit(instructionDatum.pack(false));
         else if (encrypted) transmit(instructionDatum.pack(true));
