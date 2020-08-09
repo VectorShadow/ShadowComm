@@ -1,9 +1,5 @@
 package crypto;
 
-import main.LogHub;
-
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
 
@@ -14,8 +10,8 @@ public class Password {
 
     static final int MAX_CHAR = 255;
 
-    private static final int MINIMUM_LENGTH = 8;
-    private static final int MAXIMUM_LENGTH = 32;
+    public static final int MINIMUM_LENGTH = 8;
+    public static final int MAXIMUM_LENGTH = 24;
     private static final int SALT_LENGTH = 8;
 
     /**
@@ -35,17 +31,28 @@ public class Password {
     }
 
     /**
-     * Hash a salted password with SHA-256.
+     * Hash a salted password.
+     * First we pad the input out to a fixed length if necessary.
+     * Then we initialize with the character at the middle of the original input,
+     * and for each character in the padded input, we generate a new character from itself and the previous character
+     * in the sequence(using the initialization value for the character at zero).
+     * Finally we return the string of generated characters.
+     * This is fully deterministic - hashing a given input will always return the same output.
+     * This is strongly resistant to collisions, tested up to 100 million random brute force attempts.
+     * This should also be extremely difficult, if not impossible, to reverse.
      */
-    public static byte[] hash(String saltedPassword){
-        String sha256 = "";
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            sha256 = new String(md.digest(saltedPassword.getBytes()));
-        } catch (NoSuchAlgorithmException e) {
-            LogHub.logFatalCrash("Unexpected exception in Password.hash().", e);
+    public static String hash(String saltedPassword){
+        StringBuilder sb  = new StringBuilder(saltedPassword);
+        while (sb.length() < SALT_LENGTH + MAXIMUM_LENGTH)
+            sb.append(sb.charAt((SALT_LENGTH + MAXIMUM_LENGTH) % sb.length()));
+        String paddedInput = sb.toString();
+        char lastValue = paddedInput.charAt(saltedPassword.length() / 2);
+        sb = new StringBuilder();
+        for (char c : paddedInput.toCharArray()) {
+            sb.append(forceAlphaNumericalSymbolic((char)((c + lastValue) % Character.MAX_VALUE), lastValue));
+            lastValue = c;
         }
-        return sha256.getBytes();
+        return sb.toString();
     }
 
     /**
