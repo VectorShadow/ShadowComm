@@ -20,6 +20,11 @@ public class RemoteDataLink extends DataLink {
     public RemoteDataLink(DataHandler dataHandler, Socket socket) {
         super(dataHandler);
         this.socket = socket;
+        try { //clear the output stream of any remaining data if we re-use an old socket
+            this.socket.getOutputStream().flush();
+        } catch (IOException e) {
+            LogHub.logFatalCrash("Socket stream reset failed.", e);
+        }
     }
 
     public Socket getSocket() {
