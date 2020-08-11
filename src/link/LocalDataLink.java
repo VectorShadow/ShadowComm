@@ -45,7 +45,7 @@ public class LocalDataLink extends DataLink {
                 }
             }
             byte[] data = input.get();
-            int remainderSize = data.length - InstructionDatum.HEADER_LENGTH;
+            int remainderSize = data.length - (InstructionDatum.HEADER_LENGTH + InstructionDatum.TRAILER_LENGTH);
             byte[] remainder = new byte[remainderSize];
             System.arraycopy(data, InstructionDatum.HEADER_LENGTH, remainder, 0, remainderSize);
             if (encrypted) remainder = ByteCipher.decrypt(remainder); //decrypt if necessary
@@ -59,7 +59,7 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum id) {
-        transmit(id.pack(encrypted));
+        transmit(id.pack(0, encrypted));
     }
     /**
      * Transmission is accomplished locally by storing the data to be transmitted in the output array, which becomes
