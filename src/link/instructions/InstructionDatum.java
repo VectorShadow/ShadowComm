@@ -1,14 +1,16 @@
 package link.instructions;
 
 import crypto.ByteCipher;
+import main.LiveLog;
 import main.LogHub;
 
 import java.io.*;
-//todo - proper, verifiable headers and trailers - be sure to check for these in RemoteDataLink.listen().
-// Also we need to design a scheme for acknowledging instructions, resending anything critical which failed, and
+//todo - we need to design a scheme for acknowledging instructions, resending anything critical which failed, and
 // tracking discrepancies automatically so the client need not request a GameZone retransmission.
 // While we're here, let's also make sure we never have the client sending critical data (like Avatars - instead send a
 // number index which the engine can use to select an Avatar from its end based on the connected account).
+
+//todo - more: find out why the engine's first three transmissions are near the size cap, and why they sometimes fail.
 /**
  * InstructionData are used by DataLinks to transmit data in a format which can be interpreted and accessed by
  * DataHandlers.
@@ -37,8 +39,9 @@ public abstract class InstructionDatum implements Serializable {
     public static final int HEADER_LENGTH = HEADER_INDICATOR_LENGTH + HEADER_SIZE_LENGTH + HEADER_SEQUENCE_LENGTH;
     public static final int TRAILER_LENGTH = TRAILER_INDICATOR_LENGTH + TRAILER_CHECKSUM_LENGTH;
 
-    private static final int MAX_DATUM_SIZE = MASK2 | MASK3;
-    private static final int MAX_SEQUENCE_INDEX = MASK0 | MASK1 | MASK2 | MASK3;
+    public static final int MAX_DATUM_SIZE = MASK2 | MASK3;
+
+    private static final int MAX_SEQUENCE_INDEX = 0x3fff_ffff;
 
     public static final int MAX_PACKET_LENGTH = HEADER_LENGTH + MAX_DATUM_SIZE + TRAILER_LENGTH;
 
@@ -90,9 +93,9 @@ public abstract class InstructionDatum implements Serializable {
         packedData[2] = (byte)((size & MASK2) >> 8);
         packedData[3] = (byte)(size & MASK3);
         //header - sequence index
-        packedData[4] = (byte)(sequenceIndex & MASK0 >> 24);
-        packedData[5] = (byte)(sequenceIndex & MASK1 >> 16);
-        packedData[6] = (byte)(sequenceIndex & MASK2 >> 8);
+        packedData[4] = (byte)((sequenceIndex & MASK0) >> 24);
+        packedData[5] = (byte)((sequenceIndex & MASK1) >> 16);
+        packedData[6] = (byte)((sequenceIndex & MASK2) >> 8);
         packedData[7] = (byte)(sequenceIndex & MASK3);
         int checksum = 0;
         for (int i = 0; i < size; ++i){
@@ -100,15 +103,16 @@ public abstract class InstructionDatum implements Serializable {
             checksum += (int)b;
             packedData[HEADER_LENGTH + i] = b;
         }
+        System.out.println("Size: " + size + " Checksum: " + checksum);
         //trailer - indicator
         packedData[packedDataSize - 8] = (byte)((TRAILER_INDICATOR & MASK0) >> 24);
         packedData[packedDataSize - 7] = (byte)((TRAILER_INDICATOR & MASK1) >> 16);
         packedData[packedDataSize - 6] = (byte)((TRAILER_INDICATOR & MASK2) >> 8);
         packedData[packedDataSize - 5] = (byte)(TRAILER_INDICATOR & MASK3);
         //trailer - validation code
-        packedData[packedDataSize - 4] = (byte)(checksum & MASK0 >> 24);
-        packedData[packedDataSize - 3] = (byte)(checksum & MASK1 >> 16);
-        packedData[packedDataSize - 2] = (byte)(checksum & MASK2 >> 8);
+        packedData[packedDataSize - 4] = (byte)((checksum & MASK0) >> 24);
+        packedData[packedDataSize - 3] = (byte)((checksum & MASK1) >> 16);
+        packedData[packedDataSize - 2] = (byte)((checksum & MASK2) >> 8);
         packedData[packedDataSize - 1] = (byte)(checksum & MASK3);
         System.arraycopy(encrypt ? ByteCipher.encrypt(rawData) : rawData, 0, packedData, HEADER_LENGTH, size);
         return packedData;
