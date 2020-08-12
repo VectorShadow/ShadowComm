@@ -3,19 +3,15 @@ package link;
 import crypto.ByteCipher;
 import link.instructions.HandshakeInstructionDatum;
 import link.instructions.InstructionDatum;
-import main.LiveLog;
 import main.LogHub;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.ArrayList;
 
 import static link.instructions.InstructionDatum.*;
 
 public class RemoteDataLink extends DataLink {
-
-    private static final int BLOCK_SIZE = 1_024;
 
     private final Socket socket;
 
@@ -259,11 +255,5 @@ public class RemoteDataLink extends DataLink {
         } catch (IOException ioe) {
             LogHub.logFatalCrash("Unexpected IOException on data transmission.", ioe);
         }
-    }
-
-    private byte[] listToArray(ArrayList<Byte> list) {
-        byte[] array = new byte[BLOCK_SIZE];
-        for (int i = 0; i < list.size(); ++i) array[i] = list.get(i);
-        return array;
     }
 }
