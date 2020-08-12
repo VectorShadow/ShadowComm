@@ -103,7 +103,6 @@ public abstract class InstructionDatum implements Serializable {
             checksum += (int)b;
             packedData[HEADER_LENGTH + i] = b;
         }
-        System.out.println("Size: " + size + " Checksum: " + checksum);
         //trailer - indicator
         packedData[packedDataSize - 8] = (byte)((TRAILER_INDICATOR & MASK0) >> 24);
         packedData[packedDataSize - 7] = (byte)((TRAILER_INDICATOR & MASK1) >> 16);

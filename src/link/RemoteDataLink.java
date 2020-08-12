@@ -33,9 +33,6 @@ public class RemoteDataLink extends DataLink {
         return socket;
     }
 
-    /**
-     * todo - write up of how receive works
-     */
     protected void receive() {
         //an integer representation of specific byte values, used for verification of packet integrity
         int checkValue;
@@ -65,10 +62,6 @@ public class RemoteDataLink extends DataLink {
         //reading pointer - mark our position in the reader array
         int readingAt = 0;
         do {
-            LiveLog.log(
-                    "Beginning outer receive loop - reading at: " + readingAt + " bytesRead: " + bytesRead,
-                    LiveLog.LogEntryPriority.DEBUG
-            );
             try {
                 //check the read stream for any remaining data
                 if (readingAt < bytesRead) {
@@ -89,11 +82,6 @@ public class RemoteDataLink extends DataLink {
                     System.arraycopy(carryover, 0, readStream, 0, bytesRead);
                     carryover = new byte[0];
                 }
-                //read from the socket input stream into the reader array
-                LiveLog.log(
-                        "Read array initialized.",
-                        LiveLog.LogEntryPriority.DEBUG
-                );
                 // Read data from the stream so long as the stream has data available and we've not yet read
                 // enough bytes to fill our read array
                 // OR
@@ -109,27 +97,14 @@ public class RemoteDataLink extends DataLink {
                     }
                     readStream[bytesRead++] = (byte)byteRead;
                 }
-                LiveLog.log(
-                        "Reading on socket - read " + bytesRead + " bytes.",
-                        LiveLog.LogEntryPriority.DEBUG
-                );
                 //attempt to derive instructions from the read array until we reach the end
                 while (readingAt + TRAILER_LENGTH <= bytesRead) {
-                    LiveLog.log(
-                            "Beginning inner receive loop. Reading pointer is at " + readingAt + " out of "
-                                    + bytesRead + " bytes.",
-                            LiveLog.LogEntryPriority.DEBUG
-                    );
                     //no current instruction, or current instruction contains a corrupted header:
                     if (
                             writingAt < 2 ||
                                     writingAt == 3 ||
                                     (writingAt > 4 && writingAt < HEADER_LENGTH)
                     ) {
-                        LiveLog.log(
-                                "No current instruction.",
-                                LiveLog.LogEntryPriority.DEBUG
-                        );
                         //reset instruction values
                         instruction = new byte[MAX_PACKET_LENGTH];
                         writingAt = 0;
@@ -137,12 +112,6 @@ public class RemoteDataLink extends DataLink {
                         instructionTrailerFound = false;
                         //seek the next instruction header
                         while (readingAt + HEADER_LENGTH <= bytesRead) {
-                            if (readingAt % 4_096 == 0)
-                                LiveLog.log(
-                                        "Seeking header indicator. Reading pointer is at " + readingAt + " out of "
-                                                + bytesRead + " bytes.",
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                             //check the next 2 bytes in the reading array to see if the indicate an instruction header
                             checkValue = toInt(readStream, readingAt, HEADER_INDICATOR_LENGTH);
                             //if so, we're done
@@ -151,11 +120,6 @@ public class RemoteDataLink extends DataLink {
                                 writingAt += HEADER_INDICATOR_LENGTH;
                                 //advance the reading pointer to the next expected value
                                 readingAt += HEADER_INDICATOR_LENGTH;
-                                LiveLog.log(
-                                        "Found header indicator. Now writing at " + writingAt +
-                                                " and reading at " + readingAt,
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                                 //then stop looking for the
                                 break;
                             }
@@ -169,11 +133,6 @@ public class RemoteDataLink extends DataLink {
                         expectedInstructionSize = toInt(readStream, readingAt, HEADER_SIZE_LENGTH);
                         writingAt += HEADER_SIZE_LENGTH;
                         readingAt += HEADER_SIZE_LENGTH;
-                        LiveLog.log(
-                                "Parsing for instruction size - " + expectedInstructionSize +
-                                        " bytes. Now writing at " + writingAt + " and reading at " + readingAt,
-                                LiveLog.LogEntryPriority.DEBUG
-                        );
                     }
                     //current instruction contains only the header indicator and instruction size
                     //read the next four bytes to determine the packet sequence index.
@@ -182,11 +141,6 @@ public class RemoteDataLink extends DataLink {
                         instructionSequenceIndex = toInt(readStream, readingAt, HEADER_SEQUENCE_LENGTH);
                         writingAt += HEADER_SEQUENCE_LENGTH;
                         readingAt += HEADER_SEQUENCE_LENGTH;
-                        LiveLog.log(
-                                "Parsing for instruction sequence index - " + instructionSequenceIndex +
-                                        ". Now writing at " + writingAt + " and reading at " + readingAt,
-                                LiveLog.LogEntryPriority.DEBUG
-                        );
                     }
                     //current instruction contains the header data and 0 or more bytes of the actual instruction:
                     //continue writing the instruction from the reader array until we find the trailer indicator
@@ -195,21 +149,11 @@ public class RemoteDataLink extends DataLink {
                             (readingAt + HEADER_SIZE_LENGTH <= bytesRead) &&
                             !instructionTrailerFound
                     ) {
-                        LiveLog.log(
-                                "Building instruction body. Now writing at " + writingAt +
-                                        " and reading at " + readingAt,
-                                LiveLog.LogEntryPriority.DEBUG
-                        );
                         //loop until we have no more bytes to read, or we have read the trailer indicator
                         while (readingAt + TRAILER_INDICATOR_LENGTH <= bytesRead && !instructionTrailerFound) {
                             checkValue = toInt(readStream, readingAt, 4);
                             //if we find the trailer indicator
                             if (checkValue == TRAILER_INDICATOR) {
-                                LiveLog.log(
-                                        "Found trailer indicator. Now writing at " + writingAt +
-                                                " and reading at " + readingAt,
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                                 //mark it found
                                 instructionTrailerFound = true;
                                 //advance the reading pointer past the trailer indicator
@@ -230,11 +174,6 @@ public class RemoteDataLink extends DataLink {
                             //begin looking for the next instruction
                             else if (writingAt - HEADER_LENGTH == expectedInstructionSize) {
                                 writingAt = 0;
-                                LiveLog.log(
-                                        "Read " + expectedInstructionSize + " bytes without finding " +
-                                                "trailer. Packet deemed corrupt.",
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                             }
                             //paranoia case - this should not be able to occur.
                             else if (writingAt - HEADER_LENGTH > expectedInstructionSize) {
@@ -256,18 +195,8 @@ public class RemoteDataLink extends DataLink {
                     //if we've found the instruction trailer and there's enough data left in the reading array to
                     // contain the checksum for this instruction, we need to validate it
                     if (instructionTrailerFound && (readingAt + TRAILER_CHECKSUM_LENGTH <= bytesRead)) {
-                        LiveLog.log(
-                                "Validating checksum. Now writing at " + writingAt +
-                                        " and reading at " + readingAt,
-                                LiveLog.LogEntryPriority.DEBUG
-                        );
                         //if we haven't yet reset the writing pointer, we have a good instruction so far
                         if (writingAt >= HEADER_LENGTH + expectedInstructionSize) {
-                            LiveLog.log(
-                                    "Trailer indicator found at expected location. Now writing at "
-                                            + writingAt + " and reading at " + readingAt,
-                                    LiveLog.LogEntryPriority.DEBUG
-                            );
                             //grab the checksum
                             checkValue = toInt(readStream, readingAt, TRAILER_CHECKSUM_LENGTH);
                             //parse the instruction down to just the data
@@ -276,10 +205,6 @@ public class RemoteDataLink extends DataLink {
                             //decrypt if necessary - if this is the case we also need to calculate the checksum from
                             // the decrypted instruction
                             if (encrypted) {
-                                LiveLog.log(
-                                        "Calculating enrypted checksum...",
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                                 completedInstruction = ByteCipher.decrypt(completedInstruction);
                                 for (byte b : completedInstruction)
                                     instructionCheckSum += b;
@@ -287,18 +212,10 @@ public class RemoteDataLink extends DataLink {
                             //check the instruction's carried checksum against the checksum calculated from the
                             // instruction data
                             if (checkValue == instructionCheckSum) {
-                                LiveLog.log(
-                                        "Checksum validated. ",
-                                        LiveLog.LogEntryPriority.DEBUG
-                                );
                                 //pass it to the data handler
                                 DATA_HANDLER.handle(completedInstruction, this);
                                 //todo - use the sequence to confirm receipt?
                             }
-                            else
-                                LiveLog.log("Checksum validation failed - passed value: " + checkValue +
-                                                " != calculated value: " + instructionCheckSum,
-                                        LiveLog.LogEntryPriority.DEBUG);
                             //else this instruction has been corrupted. No need to do anything here, in either case,
                             //we need to begin a new instruction
                         }
@@ -314,58 +231,6 @@ public class RemoteDataLink extends DataLink {
                 LogHub.logFatalCrash("Exception in RemoteDataLink thread.", e);
             }
         } while (!terminated);
-
-//        boolean activeInstruction = false;
-//        int instructionBodySize = 0; //the number of bytes expected by the current instruction
-//        int bytesReadInInstruction = 0; //the number of bytes read from the stream so far for this instruction
-//        byte[] instructionBody = new byte[0]; //an array which accumulates the data for this instruction
-//        byte[] streamBlock; //the block read from the stream this iteration
-//        ArrayList<Byte> excess = new ArrayList<>(); //leftover data in the stream after completing the last instruction
-//        int bytesRead = 0; //the number of bytes read from the stream this iteration
-//        boolean firstBlock = true; //only the first block of a transmission should exclude the header segment
-//        do {
-//            try {
-//                if (excess.size() > 0) {
-//                    streamBlock = listToArray(excess);
-//                    bytesRead = excess.size();
-//                    excess = new ArrayList<>();
-//                } else {
-//                    streamBlock = new byte[BLOCK_SIZE];
-//                    bytesRead = socket.getInputStream().read(streamBlock,0, BLOCK_SIZE);
-//                }
-//                if (bytesRead < 0) { //error reading on socket - connection lost
-//                    DATA_HANDLER.connectionLost(this); //report the connection lost to the data handler
-//                } else if (bytesRead > 0){ //data was read from the stream this pass - we do nothing on 0
-//                    if (!activeInstruction) { //if we have no current instruction, parse for the next one
-//                        if (bytesRead < HEADER_LENGTH) throw new IllegalArgumentException( //we need a 4 byte header to begin
-//                                "Stream contained too few bytes to parse: " + bytesRead + " bytes were in the stream.");
-//                        activeInstruction = true;
-//                        instructionBodySize = readSize(streamBlock[0], streamBlock[1]); //get the size as an int
-//                        instructionBody = new byte[instructionBodySize]; //initialize the body block
-//                    } else firstBlock = false; //else ensure we no longer exclude the header until this instruction is complete
-//                    for (int i = firstBlock ? HEADER_LENGTH : 0; i < bytesRead; ++i) { //iterate through the bytes read this pass
-//                        if (bytesReadInInstruction < instructionBodySize){ //bytes from the current instruction
-//                            instructionBody[bytesReadInInstruction++] = streamBlock[i];
-//                        } else { //bytes from a new instruction
-//                            excess.add(streamBlock[i]); //these go into excess to be handled next pass
-//                        }
-//                    }
-//                    if (bytesReadInInstruction >= instructionBodySize) { //if we finished an instruction, handle it
-//                        if (encrypted) //post handshake transmissions are encrypted
-//                            instructionBody = ByteCipher.decrypt(instructionBody);
-//                        DATA_HANDLER.handle(instructionBody, this);
-//                        activeInstruction = false; //then reset the data members
-//                        instructionBodySize = 0;
-//                        bytesReadInInstruction = 0;
-//                        firstBlock = true;
-//                    }
-//                }
-//            } catch (SocketException se) {
-//                DATA_HANDLER.connectionLost(this);
-//            } catch (Exception e) {
-//                LogHub.logFatalCrash("Exception in RemoteDataLink thread.", e);
-//            }
-//        } while (!terminated);
     }
 
     /**
@@ -375,7 +240,6 @@ public class RemoteDataLink extends DataLink {
      */
     @Override
     public void transmit(InstructionDatum instructionDatum) {
-        LiveLog.log("transmitting instruction datum of class " + instructionDatum.getClass(), LiveLog.LogEntryPriority.DEBUG);
         if (instructionDatum instanceof HandshakeInstructionDatum)
             transmit(instructionDatum.pack(0,false));
         else if (encrypted) transmit(instructionDatum.pack(0,true));
