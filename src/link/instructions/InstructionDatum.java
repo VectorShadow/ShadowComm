@@ -31,7 +31,7 @@ public abstract class InstructionDatum implements Serializable {
     public static final int TRAILER_INDICATOR = 0x1e2d4b87;
 
     public static final int HEADER_INDICATOR_LENGTH = 2;
-    public static final int HEADER_SIZE_LENGTH = 2;
+    public static final int HEADER_SIZE_LENGTH = 3;
     public static final int HEADER_SEQUENCE_LENGTH = 4;
     public static final int TRAILER_INDICATOR_LENGTH = 4;
     public static final int TRAILER_CHECKSUM_LENGTH = 4;
@@ -39,7 +39,7 @@ public abstract class InstructionDatum implements Serializable {
     public static final int HEADER_LENGTH = HEADER_INDICATOR_LENGTH + HEADER_SIZE_LENGTH + HEADER_SEQUENCE_LENGTH;
     public static final int TRAILER_LENGTH = TRAILER_INDICATOR_LENGTH + TRAILER_CHECKSUM_LENGTH;
 
-    public static final int MAX_DATUM_SIZE = MASK2 | MASK3;
+    public static final int MAX_DATUM_SIZE = 0x000f_ffff; //~1MB
 
     private static final int MAX_SEQUENCE_INDEX = 0x3fff_ffff;
 
@@ -90,13 +90,14 @@ public abstract class InstructionDatum implements Serializable {
         packedData[0] = (byte)((HEADER_INDICATOR & MASK2) >> 8);
         packedData[1] = (byte)(HEADER_INDICATOR & MASK3);
         //header - size
-        packedData[2] = (byte)((size & MASK2) >> 8);
-        packedData[3] = (byte)(size & MASK3);
+        packedData[2] = (byte)((size & MASK1) >> 16);
+        packedData[3] = (byte)((size & MASK2) >> 8);
+        packedData[4] = (byte)(size & MASK3);
         //header - sequence index
-        packedData[4] = (byte)((sequenceIndex & MASK0) >> 24);
-        packedData[5] = (byte)((sequenceIndex & MASK1) >> 16);
-        packedData[6] = (byte)((sequenceIndex & MASK2) >> 8);
-        packedData[7] = (byte)(sequenceIndex & MASK3);
+        packedData[5] = (byte)((sequenceIndex & MASK0) >> 24);
+        packedData[6] = (byte)((sequenceIndex & MASK1) >> 16);
+        packedData[7] = (byte)((sequenceIndex & MASK2) >> 8);
+        packedData[8] = (byte)(sequenceIndex & MASK3);
         int checksum = 0;
         for (int i = 0; i < size; ++i){
             byte b = rawData[i];
@@ -117,14 +118,6 @@ public abstract class InstructionDatum implements Serializable {
         return packedData;
     }
 
-    /**
-     * Recover the integer value corresponding to size from the three bytes carrying that value.
-     * @Deprecated by toInt().
-     */
-    @Deprecated
-    public static int readSize(byte s0, byte s1) {
-        return ((s0 << 8) & MASK0) | (s1 & MASK1);
-    }
     /**
      * Find an integer value associated with up to 4 consecutive bytes at the specified offset within the provided
      * byte array.
