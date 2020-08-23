@@ -4,6 +4,9 @@ import crypto.ByteCipher;
 import link.instructions.InstructionDatum;
 import main.LogHub;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+
 /**
  * The local version of DataLink.
  * All data is stored in byte arrays, and the link maintains pointers to each array.
@@ -12,13 +15,16 @@ import main.LogHub;
 public class LocalDataLink extends DataLink {
 
     private class ByteArrayPointer {
-        byte[] value = null;
+        ArrayDeque<byte[]> pendingTransmissions = new ArrayDeque<>();
 
-        void set(byte[] val) {
-            value = val;
+        void pendTransmission(byte[] val) {
+            pendingTransmissions.addLast(val);
         }
-        byte[] get() {
-            return value;
+        boolean isPendingTransmissions() {
+            return !pendingTransmissions.isEmpty();
+        }
+        byte[] getNextPendingTransmission() {
+            return pendingTransmissions.removeFirst();
         }
     }
 
@@ -37,20 +43,19 @@ public class LocalDataLink extends DataLink {
     @Override
     protected void receive() {
         do {
-            while (input.get() == null) { //wait until we have something to do
+            while (!input.isPendingTransmissions()) { //wait until we have something to do
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
                     LogHub.logFatalCrash("Thread interrupted during local data reception.", e);
                 }
             }
-            byte[] data = input.get();
+            byte[] data = input.getNextPendingTransmission();
             int remainderSize = data.length - (InstructionDatum.HEADER_LENGTH + InstructionDatum.TRAILER_LENGTH);
             byte[] remainder = new byte[remainderSize];
             System.arraycopy(data, InstructionDatum.HEADER_LENGTH, remainder, 0, remainderSize);
             if (encrypted) remainder = ByteCipher.decrypt(remainder); //decrypt if necessary
             DATA_HANDLER.handle(remainder, this);
-            input.set(null);
         } while (!terminated);
     }
 
@@ -69,14 +74,7 @@ public class LocalDataLink extends DataLink {
      */
     @Override
     protected void transmit(byte[] data) {
-        while(output.get() != null) { //don't overwrite the current output until it's been handled
-            try {
-                Thread.sleep(5);
-            } catch (InterruptedException e) {
-                LogHub.logFatalCrash("Thread interrupted during local data transmission.", e);
-            }
-        }
-        output.set(data);
+        output.pendTransmission(data);
     }
 
     public static void pair(LocalDataLink link1, LocalDataLink link2) {
